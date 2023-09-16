@@ -4,7 +4,11 @@
 Hola! Este README es un documento complementario al PDF de la consigna del TP. Se recomienda primero leer el PDF, ya que el objetivo de este documento es aclarar algunos detalles técnicos que van a ser útiles para resolver el trabajo.
 
 ### Stack
+<<<<<<< HEAD
 Para este TP vamos a usar [**Stack**](https://docs.haskellstack.org/), una herramienta sencilla para desarrollar poryectos en Haskell. Stack tiene muchas utilidades, pero ahora nos vamos a concentrar sus funciones básicas.
+=======
+Para este TP vamos a usar [**Stack**](https://docs.haskellstack.org/), una herramienta sencilla para desarrollar proyectos en Haskell. Stack tiene muchas utilidades, pero ahora nos vamos a concentrar sus funciones básicas.
+>>>>>>> ea23316 (Primer commit - Pruebas del parser)
 
 Antes que nada, puede que tengas que instalarlo. En [1](https://docs.haskellstack.org/en/stable/README/#how-to-install) hay guías de instalación para distintas plataformas.
 
