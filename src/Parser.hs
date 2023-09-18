@@ -2,6 +2,7 @@ module Parser where
 
 import           Text.ParserCombinators.Parsec
 import           Text.Parsec.Token
+import           Text.ParserCombinators.Parsec.Expr
 import           Text.Parsec.Language           ( emptyDef )
 import           AST
 
@@ -33,6 +34,7 @@ lis = makeTokenParser
                         , "||"
                         , "!"
                         , "="
+                        , ":="
                         , "=="
                         , "!="
                         , ";"
@@ -44,18 +46,43 @@ lis = makeTokenParser
 ----------------------------------
 --- Parser de expressiones enteras
 -----------------------------------
-arithOp :: Parser (Exp Int -> Exp Int -> Exp Int)
-arithOp = do { reservedOp lis "+"; return Plus }
-      <|> do { reservedOp lis "-"; return Minus}
-      <|> do { reservedOp lis "*" ; return Times }
-      <|> do { reservedOp lis "/" ; return Div}
+intseqOp :: Parser (Exp Int -> Exp Int -> Exp Int)
+intseqOp = do { reservedOp lis "," ; return ESeq }
 
 intexp :: Parser (Exp Int)
-intexp =
-  do  {
-      ; n <- natural lis
-      ; return $ Const (fromIntegral n)
-      }
+intexp = intexp' `chainl1` intseqOp
+
+intexp' :: Parser (Exp Int)
+intexp' = buildExpressionParser table intexp''
+      where
+        table = [[prefix "-" UMinus]
+                ,[binary "*" Times AssocLeft]
+                ,[binary "/" Div AssocLeft]
+                ,[binary "+" Plus AssocLeft]
+                ,[binary "-" Minus AssocLeft]
+                ]
+        binary name fun assoc = Infix  (do{ reservedOp lis name; return fun }) assoc
+        prefix name fun       = Prefix (do{ reservedOp lis name; return fun })
+
+intexp'' :: Parser (Exp Int)
+intexp'' = try (do  {
+              ; n <- natural lis
+              ; return $ Const $ fromIntegral n
+              })
+          <|>
+          try (do {
+              ; v <- identifier lis
+              ; reservedOp lis "="
+              ; e <- intexp'
+              ; return $ EAssgn v e
+          })
+          <|>
+          try (do {
+              ; v <- identifier lis
+              ; return $ Var v
+          })
+          <|>
+          try (parens lis intexp)
 
 -----------------------------------
 --- Parser de expressiones booleanas
@@ -68,39 +95,35 @@ cmpOp = do { reservedOp lis "=="; return Eq  }
     <|> do { reservedOp lis ">" ; return Gt  }
     <|> unexpected "comparison operator"
 
-boolOp :: Parser (Exp Bool -> Exp Bool -> Exp Bool)
-boolOp = do { reservedOp lis "&&"; return And }
-     <|> do { reservedOp lis "||"; return Or  }  
-
 boolexp :: Parser (Exp Bool)
-boolexp = boolexp' `chainl1` boolOp
+boolexp = buildExpressionParser table boolexp'
+        where
+          table = [[prefix "!" Not]
+                  ,[binary "&&" And AssocLeft]
+                  ,[binary "||" Or  AssocLeft]
+                  ]
+          binary name fun assoc = Infix  (do{ reservedOp lis name; return fun }) assoc
+          prefix name fun       = Prefix (do{ reservedOp lis name; return fun })
 
 boolexp' :: Parser (Exp Bool)
 boolexp' = try (do {
-            ; e1 <- intexp
-            ; op <- cmpOp
-            ; e2 <- intexp
-            ; return $ op e1 e2
-          })
-          <|>
-          try (do {
-            ; reservedOp lis "!"
-            ; b <- boolexp
-            ; return $ Not b
-          })
-          <|>
-          try (parens lis boolexp)
-          <|>
-          try (do {
-                  ; s <- reserved lis "true"
-                  ; return BTrue
-                  })
-          <|>
-          try (do {
-                  ; s <- reserved lis "false"
-                  ; return BFalse
-                  })
-
+              ; e1 <- intexp
+              ; op <- cmpOp
+              ; e2 <- intexp
+              ; return $ op e1 e2
+            })
+            <|>
+            try (parens lis boolexp)
+            <|>
+            try (do {
+              ; s <- reserved lis "true"
+              ; return BTrue
+              })
+            <|>
+            try (do {
+              ; s <- reserved lis "false"
+              ; return BFalse
+              })
 
 
 -----------------------------------
@@ -119,7 +142,7 @@ comm' = do { try $ reserved lis "skip"
         <|>
         try (do {
           ; v <- identifier lis
-          ; reservedOp lis "="
+          ; reservedOp lis ":="
           ; e <- intexp
           ; return $ Let v e
           })

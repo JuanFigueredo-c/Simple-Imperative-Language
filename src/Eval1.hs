@@ -12,25 +12,22 @@ import           Data.Strict.Tuple
 type State = M.Map Variable Int
 
 -- Estado nulo
--- Completar la definición
 initState :: State
-initState = undefined
+initState = M.empty
 
 -- Busca el valor de una variable en un estado
--- Completar la definición
 lookfor :: Variable -> State -> Int
-lookfor v s = undefined
+lookfor v s = M.(!)
 
 -- Cambia el valor de una variable en un estado
--- Completar la definición
 update :: Variable -> Int -> State -> State
-update = undefined
+update = M.insert
 
 -- Evalua un programa en el estado nulo
 eval :: Comm -> State
 eval p = stepCommStar p initState
 
--- Evalua multiples pasos de un comnado en un estado,
+-- Evalua multiples pasos de un comando en un estado,
 -- hasta alcanzar un Skip
 stepCommStar :: Comm -> State -> State
 stepCommStar Skip s = s
