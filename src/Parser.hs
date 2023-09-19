@@ -34,7 +34,6 @@ lis = makeTokenParser
                         , "||"
                         , "!"
                         , "="
-                        , ":="
                         , "=="
                         , "!="
                         , ";"
@@ -142,7 +141,7 @@ comm' = do { try $ reserved lis "skip"
         <|>
         try (do {
           ; v <- identifier lis
-          ; reservedOp lis ":="
+          ; reservedOp lis "="
           ; e <- intexp
           ; return $ Let v e
           })
@@ -162,7 +161,7 @@ comm' = do { try $ reserved lis "skip"
         <|>
         try (do {
           ; reserved lis "repeat"
-          ; c <- comm
+          ; c <- braces lis comm
           ; reserved lis "until"
           ; b <- boolexp
           ; reserved lis "end"

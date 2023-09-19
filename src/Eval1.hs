@@ -36,9 +36,55 @@ stepCommStar c    s = Data.Strict.Tuple.uncurry stepCommStar $ stepComm c s
 -- Evalua un paso de un comando en un estado dado
 -- Completar la definición
 stepComm :: Comm -> State -> Pair Comm State
-stepComm = undefined
+stepComm Skip s = Skip :!: s
+stepComm (Let v e) s =  let (n :!: s') = evalExp e s
+                        in Skip :!: (update v n s')
+stepComm (IfThenElse e c1 c2) s = let (b :!: s') = evalExp e s
+                                  in if b then c1 :!: s' else c2 :!: s'
+stepComm (Seq Skip c2) s = c2 :!: s
+stepComm (Seq c1 c2)   s =  let (c1' :!: s') = stepComm c1 s
+                            in (Seq c1' c2) :!: s'
+stepComm r@(Repeat c e) s = (Seq c (IfThenElse e Skip r)) :!: s
 
 -- Evalua una expresion
 -- Completar la definición
 evalExp :: Exp a -> State -> Pair a State
-evalExp = undefined
+evalExp (Const n) s = n :!: s
+evalExp (Var v) s = lookfor v s :!: s
+evalExp (UMinus e) s = let (n :!: s') = evalExp e s in -n :!: s'
+evalExp (Plus e1 e2) s =  let (n1 :!: s')  = evalExp e1 s
+                              (n2 :!: s'') = evalExp e2 s'
+                          in (n1 + n2) :!: s''
+evalExp (Minus e1 e2) s = let (n1 :!: s')  = evalExp e1 s
+                              (n2 :!: s'') = evalExp e2 s'
+                          in (n1 - n2) :!: s''
+evalExp (Times e1 e2) s = let (n1 :!: s')  = evalExp e1 s
+                              (n2 :!: s'') = evalExp e2 s'
+                          in (n1 * n2) :!: s''
+evalExp (Div e1 e2) s = let (n1 :!: s')  = evalExp e1 s
+                            (n2 :!: s'') = evalExp e2 s'
+                        in (n1 `div` n2) :!: s''
+evalExp (EAssgn v e) s = let (n :!: s') = evalExp e s in n :!: (update v n s')
+evalExp (ESeq e1 e2) s = let (_ :!: s') = evalExp e1 s in evalExp e2 s'
+evalExp BTrue s = True :!: s
+evalExp BFalse s = False :!: s
+evalExp (Lt e1 e2) s =  let (n1 :!: s') = evalExp e1 s
+                            (n2 :!: s'') = evalExp e2 s'
+                        in (n1 < n2) :!: s''
+evalExp (Gt e1 e2) s =  let (n1 :!: s') = evalExp e1 s
+                            (n2 :!: s'') = evalExp e2 s'
+                        in (n1 > n2) :!: s''
+evalExp (Eq e1 e2) s =  let (n1 :!: s') = evalExp e1 s
+                            (n2 :!: s'') = evalExp e2 s'
+                        in (n1 == n2) :!: s''
+evalExp (NEq e1 e2) s = let (n1 :!: s') = evalExp e1 s
+                            (n2 :!: s'') = evalExp e2 s'
+                        in (n1 /= n2) :!: s''
+evalExp (And e1 e2) s = let (b1 :!: s') = evalExp e1 s
+                            (b2 :!: s'') = evalExp e2 s'
+                        in (b1 && b2) :!: s''
+evalExp (Or e1 e2) s =  let (b1 :!: s') = evalExp e1 s
+                            (b2 :!: s'') = evalExp e2 s'
+                        in (b1 || b2) :!: s''
+evalExp (Not e) s = let (b :!: s') = evalExp e s
+                    in (not b) :!: s'
