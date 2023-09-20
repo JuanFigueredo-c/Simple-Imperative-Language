@@ -45,5 +45,36 @@ stepComm = undefined
 
 -- Evalua una expresion
 -- Completar la definición
+
+combineExp :: Exp a -> Exp a -> State -> (a -> a -> b) -> Either Error (Pair b State)
+combineExp e1 e2 s op =  case evalExp e1 s of
+                         Left error -> Left error
+                         Right (n1 :!: s') -> case evalExp e2 s' of
+                                              Left error -> Left error
+                                              Right  (n2 :!: s'') -> Right (op n1 n2) :!: s''
+                          
 evalExp :: Exp a -> State -> Either Error (Pair a State)
-evalExp = undefined
+evalExp (Const n) s = n :!: s
+evalExp (Var v) s = lookfor v s :!: s
+evalExp (UMinus e) s = case evalExp e s of
+                       Left error -> Left error
+                       Right (-n :!: s') -> Right (-n :!: s')
+evalExp (Plus e1 e2) s = combineExp e1 e2 s (+) 
+evalExp (Times e1 e2) s = combineExp e1 e2 s (*)                                 
+evalExp (Div e1 e2) s = combineExp e1 e2 s (\x y -> if y == 0 then 
+evalExp (EAssgn v e) s = case evalExp e s of
+                         Left error -> Left error
+                         Right (n :!: (update v n s')) -> Right (n :!: (update v n s'))
+evalExp (ESeq e1 e2) s = case evalExp e1 s of
+                         Left error -> Left error
+                         Right (_ :!: s') -> Right evalExp e2 s'
+evalExp BTrue s = True :!: s
+evalExp BFalse s = False :!: s
+evalExp (Lt e1 e2) s = combineExp e1 e2 s  (<)
+evalExp (Gt e1 e2) s = combineExp e1 e2 s (>)
+evalExp (Eq e1 e2) s = combineExp e1 e2 s (==)
+evalExp (NEq e1 e2) s = combineExp e1 e2 s (/=)
+evalExp (And e1 e2) s = combineExp e1 e2 s (&&)
+evalExp (Or e1 e2) s = combineExp e1 e2 s (||)
+evalExp (Not e) s = case evalExp e s
+                    in (not b) :!: s'
