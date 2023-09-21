@@ -49,17 +49,18 @@ stepComm r@(Repeat c e) s = (Seq c (IfThenElse e Skip r)) :!: s
 -- Evalua una expresion
 -- Completar la definición
 
-combineExp :: Exp a -> Exp a -> State -> (a -> a -> b) -> Pair b State 
+combineExp :: Exp a -> Exp a -> State -> (a -> a -> b) -> Pair b State
 combineExp e1 e2 s op = let (n1 :!: s') = evalExp e1 s
                             (n2 :!: s'') = evalExp e2 s'
                         in (op n1 n2) :!: s''
-                          
+
 evalExp :: Exp a -> State -> Pair a State
 evalExp (Const n) s = n :!: s
 evalExp (Var v) s = lookfor v s :!: s
 evalExp (UMinus e) s = let (n :!: s') = evalExp e s in -n :!: s'
-evalExp (Plus e1 e2) s = combineExp e1 e2 s (+) 
-evalExp (Times e1 e2) s = combineExp e1 e2 s (*)                                 
+evalExp (Plus e1 e2) s = combineExp e1 e2 s (+)
+evalExp (Minus e1 e2) s = combineExp e1 e2 s (-)
+evalExp (Times e1 e2) s = combineExp e1 e2 s (*)
 evalExp (Div e1 e2) s = combineExp e1 e2 s div
 evalExp (EAssgn v e) s = let (n :!: s') = evalExp e s in n :!: (update v n s')
 evalExp (ESeq e1 e2) s = let (_ :!: s') = evalExp e1 s in evalExp e2 s'
