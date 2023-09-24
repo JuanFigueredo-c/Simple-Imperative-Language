@@ -34,7 +34,6 @@ stepCommStar Skip s = s
 stepCommStar c    s = Data.Strict.Tuple.uncurry stepCommStar $ stepComm c s
 
 -- Evalua un paso de un comando en un estado dado
--- Completar la definición
 stepComm :: Comm -> State -> Pair Comm State
 stepComm Skip s = Skip :!: s
 stepComm (Let v e) s =  let (n :!: s') = evalExp e s
@@ -47,8 +46,6 @@ stepComm (Seq c1 c2)   s =  let (c1' :!: s') = stepComm c1 s
 stepComm r@(Repeat c e) s = (Seq c (IfThenElse e Skip r)) :!: s
 
 -- Evalua una expresion
--- Completar la definición
-
 combineExp :: Exp a -> Exp a -> State -> (a -> a -> b) -> Pair b State
 combineExp e1 e2 s op = let (n1 :!: s') = evalExp e1 s
                             (n2 :!: s'') = evalExp e2 s'
