@@ -12,19 +12,16 @@ import           Data.Strict.Tuple
 type State = M.Map Variable Int
 
 -- Estado nulo
--- Completar la definición
 initState :: State
 initState = M.empty
 
 -- Busca el valor de una variable en un estado
--- Completar la definición
 lookfor :: Variable -> State -> Either Error Int
-lookfor v s = case M.lookup v s of 
-              Just val -> Right val
-              Nothing -> Left UndefVar
+lookfor v s = case M.lookup v s of
+                Nothing -> Left UndefVar
+                Just n -> Right n
 
 -- Cambia el valor de una variable en un estado
--- Completar la definición
 update :: Variable -> Int -> State -> State
 update = M.insert
 
@@ -41,21 +38,18 @@ stepCommStar c    s = do
   stepCommStar c' s'
 
 -- Evalua un paso de un comando en un estado dado
--- Completar la definición
 stepComm :: Comm -> State -> Either Error (Pair Comm State)
-stepComm Skip s = return (Skip :!: s)
-stepComm (Let v e) s =  do (n :!: s') <- evalExp e s
-                           return $ (Skip :!: (update v n s'))
+stepComm Skip s = Right $ Skip :!: s
+stepComm (Let v e) s = do (n :!: s') <- evalExp e s
+                          return $ Skip :!: (update v n s')
 stepComm (IfThenElse e c1 c2) s = do (b :!: s') <- evalExp e s
-                                     return $ if b then (c1 :!: s') else (c2 :!: s')
-stepComm (Seq Skip c2) s = return $ (c2 :!: s)
-stepComm (Seq c1 c2)   s =  do (c1' :!: s') <- stepComm c1 s 
-                               return $ ((Seq c1' c2) :!: s')
+                                     return $ if b then c1 :!: s' else c2 :!: s'
+stepComm (Seq Skip c2) s = return $ c2 :!: s
+stepComm (Seq c1 c2)   s = do (c1' :!: s') <- stepComm c1 s
+                              return $ (Seq c1' c2) :!: s'
 stepComm r@(Repeat c e) s = return $ (Seq c (IfThenElse e Skip r)) :!: s
-                            
 
 -- Evalua una expresion
--- Completar la definición
 
 rightBinOp :: (a -> a -> b) -> (a -> a -> Either Error b)
 rightBinOp op = (\x y -> Right (op x y)) 
