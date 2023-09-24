@@ -63,8 +63,8 @@ stepComm r@(Repeat c e) s = return $ (Seq c (IfThenElse e Skip r)) :!: s
 -- Evalua una expresion
 -- Completar la definición
 
-eitherop :: (a -> a -> b) -> (a -> a -> Either Error b)
-eitherop op = (\x y -> Right (op x y)) 
+rightBinOp :: (a -> a -> b) -> (a -> a -> Either Error b)
+rightBinOp op = (\x y -> Right (op x y)) 
 
 combineExp :: Exp a -> Exp a -> State -> (a -> a -> Either Error b) -> Either Error (Pair b State)
 combineExp e1 e2 s op = do (n1 :!: s') <- evalExp e1 s
@@ -75,14 +75,14 @@ combineExp e1 e2 s op = do (n1 :!: s') <- evalExp e1 s
 evalExp :: Exp a -> State -> Either Error (Pair a State)
 evalExp (Const n) s = Right (n :!: s)
 evalExp (Var v) s = case lookfor v s of 
-                    Right val -> Right (val :!: s)
                     Left error -> Left error
+                    Right n -> Right (n :!: s)
 evalExp (UMinus e) s = case evalExp e s of
                        Left error -> Left error
                        Right (n :!: s') -> Right (-n :!: s')
-evalExp (Plus e1 e2) s = combineExp e1 e2 s (eitherop (+))
-evalExp (Minus e1 e2) s = combineExp e1 e2 s (eitherop (-))
-evalExp (Times e1 e2) s = combineExp e1 e2 s (eitherop (*))                                 
+evalExp (Plus e1 e2) s = combineExp e1 e2 s (rightBinOp (+))
+evalExp (Minus e1 e2) s = combineExp e1 e2 s (rightBinOp (-))
+evalExp (Times e1 e2) s = combineExp e1 e2 s (rightBinOp (*))                                 
 evalExp (Div e1 e2) s = combineExp e1 e2 s (\x y -> if y == 0 then (Left DivByZero) else Right (div x y)) 
 evalExp (EAssgn v e) s = case evalExp e s of
                          Left error -> Left error
@@ -92,12 +92,12 @@ evalExp (ESeq e1 e2) s = case evalExp e1 s of
                          Right (_ :!: s') -> evalExp e2 s'
 evalExp BTrue s =  Right (True :!: s)
 evalExp BFalse s = Right (False :!: s)
-evalExp (Lt e1 e2) s = combineExp e1 e2 s  (eitherop (<))
-evalExp (Gt e1 e2) s = combineExp e1 e2 s (eitherop (>))
-evalExp (Eq e1 e2) s = combineExp e1 e2 s (eitherop (==))
-evalExp (NEq e1 e2) s = combineExp e1 e2 s (eitherop (/=))
-evalExp (And e1 e2) s = combineExp e1 e2 s (eitherop (&&))
-evalExp (Or e1 e2) s = combineExp e1 e2 s (eitherop (||))
+evalExp (Lt e1 e2) s = combineExp e1 e2 s  (rightBinOp (<))
+evalExp (Gt e1 e2) s = combineExp e1 e2 s (rightBinOp (>))
+evalExp (Eq e1 e2) s = combineExp e1 e2 s (rightBinOp (==))
+evalExp (NEq e1 e2) s = combineExp e1 e2 s (rightBinOp (/=))
+evalExp (And e1 e2) s = combineExp e1 e2 s (rightBinOp (&&))
+evalExp (Or e1 e2) s = combineExp e1 e2 s (rightBinOp (||))
 evalExp (Not e) s = case evalExp e s of
                     Left error -> Left error
                     Right (b :!: s') -> Right ((not b) :!: s')
