@@ -14,22 +14,26 @@ type State = (M.Map Variable Int, String)
 -- Estado nulo
 -- Completar la definición
 initState :: State
-initState = undefined
+initState = (M.empty, "")
 
 -- Busca el valor de una variable en un estado
 -- Completar la definición
 lookfor :: Variable -> State -> Either Error Int
-lookfor v s = undefined
+lookfor v s = case M.lookup v (Prelude.fst s) of 
+              Just val -> Right val
+              Nothing -> Left UndefVar
 
 -- Cambia el valor de una variable en un estado
 -- Completar la definición
 update :: Variable -> Int -> State -> State
-update x v = undefined
+update var i (s,t) = addTrace trace ((M.insert var i s),t)
+            where trace = ("Let" ++ " " ++ var ++ " " ++ (show i)) 
 
 -- Agrega una traza dada al estado
 -- Completar la definición
 addTrace :: String -> State -> State
-addTrace s = undefined
+addTrace s (state, "") = (state, s) 
+addTrace s (state, t) = (state, t ++ "," ++ s) 
 
 -- Evalua un programa en el estado nulo
 eval :: Comm -> Either Error State
@@ -46,9 +50,55 @@ stepCommStar c    s = do
 -- Evalua un paso de un comando en un estado dado
 -- Completar la definición
 stepComm :: Comm -> State -> Either Error (Pair Comm State)
-stepComm = undefined
+stepComm Skip s = return (Skip :!: s)
+stepComm (Let v e) s =  do (n :!: s') <- evalExp e s
+                           return $ (Skip :!: (update v n s'))
+stepComm (IfThenElse e c1 c2) s = do (b :!: s') <- evalExp e s
+                                     return $ if b then (c1 :!: s') else (c2 :!: s')
+stepComm (Seq Skip c2) s = return $ (c2 :!: s)
+stepComm (Seq c1 c2)   s =  do (c1' :!: s') <- stepComm c1 s 
+                               return $ ((Seq c1' c2) :!: s')
+stepComm r@(Repeat c e) s = return $ (Seq c (IfThenElse e Skip r)) :!: s
 
 -- Evalua una expresion
 -- Completar la definición
+
+eitherop :: (a -> a -> b) -> (a -> a -> Either Error b)
+eitherop op = (\x y -> Right (op x y)) 
+
+combineExp :: Exp a -> Exp a -> State -> (a -> a -> Either Error b) -> Either Error (Pair b State)
+combineExp e1 e2 s op = do (n1 :!: s') <- evalExp e1 s
+                           (n2 :!: s'') <- evalExp e2 s
+                           val <- op n1 n2 
+                           return $ (val :!: s'') 
+
 evalExp :: Exp a -> State -> Either Error (Pair a State)
-evalExp = undefined
+evalExp (Const n) s = Right (n :!: s)
+evalExp (Var v) s = case lookfor v s of 
+                    Right val -> Right (val :!: s)
+                    Left error -> Left error
+evalExp (UMinus e) s = case evalExp e s of
+                       Left error -> Left error
+                       Right (n :!: s') -> Right (-n :!: s')
+evalExp (Plus e1 e2) s = combineExp e1 e2 s (eitherop (+))
+evalExp (Minus e1 e2) s = combineExp e1 e2 s (eitherop (-))
+evalExp (Times e1 e2) s = combineExp e1 e2 s (eitherop (*))                                 
+evalExp (Div e1 e2) s = combineExp e1 e2 s (\x y -> if y == 0 then (Left DivByZero) else Right (div x y)) 
+evalExp (EAssgn v e) s = case evalExp e s of
+                         Left error -> Left error
+                         Right (n :!: s') -> Right (n :!: (update v n s'))
+evalExp (ESeq e1 e2) s = case evalExp e1 s of
+                         Left error -> Left error
+                         Right (_ :!: s') -> evalExp e2 s'
+evalExp BTrue s =  Right (True :!: s)
+evalExp BFalse s = Right (False :!: s)
+evalExp (Lt e1 e2) s = combineExp e1 e2 s  (eitherop (<))
+evalExp (Gt e1 e2) s = combineExp e1 e2 s (eitherop (>))
+evalExp (Eq e1 e2) s = combineExp e1 e2 s (eitherop (==))
+evalExp (NEq e1 e2) s = combineExp e1 e2 s (eitherop (/=))
+evalExp (And e1 e2) s = combineExp e1 e2 s (eitherop (&&))
+evalExp (Or e1 e2) s = combineExp e1 e2 s (eitherop (||))
+evalExp (Not e) s = case evalExp e s of
+                    Left error -> Left error
+                    Right (b :!: s') -> Right ((not b) :!: s')
+
